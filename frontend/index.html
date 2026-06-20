@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADVOCATE — Designed to Disagree With You</title>
+    <script>
+      // Prevent sandboxed environments/polyfills from throwing on window.fetch reassignment
+      try {
+        const originalFetch = window.fetch;
+        let activeFetch = originalFetch;
+        Object.defineProperty(window, 'fetch', {
+          get() {
+            return activeFetch;
+          },
+          set(value) {
+            activeFetch = value;
+          },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (err) {
+        console.warn("ADVOCATE: Sandbox fetch wrapper could not be initialized:", err);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+

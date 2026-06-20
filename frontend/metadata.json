@@ -1,0 +1,6 @@
+{
+  "name": "ADVOCATE",
+  "description": "The AI Designed to Disagree With You (Minimalist Idea Challenger)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

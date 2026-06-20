@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 200ms ease-out forwards;
+}
+
+@keyframes verdictEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-verdict {
+  opacity: 0;
+  animation: verdictEntrance 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 120ms;
+}
