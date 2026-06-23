@@ -1,10 +1,11 @@
 import React from "react";
+import { motion } from "motion/react";
+import logoImg from "../assets/images/advocate_owl_logo_1781994586325.jpg";
 
 /**
- * InputPanel Component
+ * InputPanel Component (Custom Sidebar)
  * Handles user input for the idea text and selected disagree-mode.
- * Sizing: Desktop-first layout, custom radio card components.
- * Constraints: Rounded corners max 8px, clear labels, light borders.
+ * Sizing: Sidebar layout, custom radio card components and active session history recall.
  * 
  * @param {object} props
  * @param {string} props.ideaText - Current value of the input idea
@@ -13,6 +14,9 @@ import React from "react";
  * @param {Function} props.setSelectedMode - State setter for mode
  * @param {Function} props.onAnalyze - Submit analyze handler
  * @param {boolean} props.isLoading - Loading state toggle
+ * @param {Array} props.historyList - Previous session logs
+ * @param {number|null} props.activeSessionId - Currently selected session ID
+ * @param {Function} props.onSelectSession - Callback when clicking a past session
  */
 export default function InputPanel({
   ideaText,
@@ -20,24 +24,27 @@ export default function InputPanel({
   selectedMode,
   setSelectedMode,
   onAnalyze,
-  isLoading
+  isLoading,
+  historyList = [],
+  activeSessionId = null,
+  onSelectSession
 }) {
   const charLimit = 1000;
 
   const modeOptions = [
     {
       id: "Demolish",
-      title: "Demolish",
+      title: "Demolish Mode",
       description: "Find every fatal flaw. No mercy, no hedging."
     },
     {
       id: "Socratic",
-      title: "Socratic",
+      title: "Socratic Mode",
       description: "Challenge through questions. Surface hidden gaps."
     },
     {
       id: "Steel Ring",
-      title: "Steel Ring",
+      title: "Steel Ring Mode",
       description: "Argue the strongest version of your idea — then attack it."
     }
   ];
@@ -62,108 +69,151 @@ export default function InputPanel({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 flex flex-col justify-between h-auto">
-      <form onSubmit={handleFormSubmit} className="space-y-6">
-        {/* Idea text area */}
-        <div className="flex flex-col space-y-2">
-          <label className="text-xs font-semibold tracking-wider text-gray-500 uppercase font-sans">
-            Your Idea
-          </label>
-          <div className="relative">
-            <textarea
-              value={ideaText}
-              onChange={handleTextChange}
-              placeholder="Describe your idea, proposal, or argument in plain language. Be as specific as possible — vague input produces vague critique."
-              rows={6}
-              disabled={isLoading}
-              className="w-full text-sm text-slate-800 p-4 border border-gray-200 rounded-md focus:outline-none focus:border-slate-800 placeholder-gray-400 bg-white resize-y transition-colors duration-150 ease-out leading-relaxed"
-              id="txt-idea-input"
+    <div className="flex flex-col justify-between h-full space-y-6">
+      <div className="space-y-6">
+        {/* 1️⃣ Sidebar Branding Header */}
+        <div 
+          onClick={() => window.location.reload()}
+          className="flex items-center space-x-3 select-none border-b border-stone-850 pb-4 cursor-pointer group"
+        >
+          <motion.div 
+            className="w-9 h-9 rounded-xl overflow-hidden border border-stone-800 bg-[#161615] flex items-center justify-center shadow-md"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <img
+              src={logoImg}
+              alt="ADVOCATE Owl Logo"
+              className="w-full h-full object-cover scale-[1.12]"
+              referrerPolicy="no-referrer"
             />
-            {/* Dynamic Character Count */}
-            <div className="text-right text-xs text-gray-400 mt-1 select-none font-mono">
-              {ideaText.length} / {charLimit}
+          </motion.div>
+          <div>
+            <h2 className="text-base font-bold tracking-wider text-stone-100 font-display uppercase leading-tight group-hover:text-white transition-colors">
+              ADVOCATE
+            </h2>
+          </div>
+        </div>
+
+        {/* 2️⃣ Form Section */}
+        <form onSubmit={handleFormSubmit} className="space-y-6">
+          {/* Idea text area */}
+          <div className="flex flex-col space-y-2">
+            <label className="text-[10px] font-bold tracking-widest text-stone-400 uppercase flex items-center space-x-1.5">
+              <span className="text-[#df4d3f]">✦</span>
+              <span>Your Proposal</span>
+            </label>
+            <div className="relative">
+              <textarea
+                value={ideaText}
+                onChange={handleTextChange}
+                placeholder="Describe your proposal, idea, or strategic decision. Be as specific as possible — vague inputs produce generic feedback."
+                rows={5}
+                disabled={isLoading}
+                className="w-full text-xs text-stone-200 p-3.5 border border-stone-800 rounded-md focus:outline-none focus:border-stone-600 placeholder-stone-600 bg-[#111110] resize-none transition-colors duration-150 ease-out leading-relaxed"
+                id="txt-idea-input"
+              />
+              {/* Dynamic Character Count */}
+              <div className="text-right text-[10px] text-stone-600 mt-1 select-none font-mono">
+                {ideaText.length} / {charLimit}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Mode selection (Simple custom radio button cards) */}
-        <div className="flex flex-col space-y-3">
-          <label className="text-xs font-semibold tracking-wider text-gray-500 uppercase font-sans">
-            Analysis Mode
-          </label>
-          <div className="space-y-3">
-            {modeOptions.map((opt) => {
-              const isSelected = selectedMode === opt.id;
-              return (
-                <div
-                  key={opt.id}
-                  onClick={() => !isLoading && setSelectedMode(opt.id)}
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors duration-150 ease-out ${
-                    isSelected
-                      ? "border-slate-800 bg-slate-50"
-                      : "border-gray-200 bg-white hover:bg-gray-50"
-                  }`}
-                  id={`mode-card-${opt.id.toLowerCase().replace(" ", "-")}`}
-                >
-                  <label className="flex items-start space-x-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="analysis-mode"
-                      value={opt.id}
-                      checked={isSelected}
-                      disabled={isLoading}
-                      onChange={() => setSelectedMode(opt.id)}
-                      className="mt-1 h-4 w-4 border-gray-300 text-slate-800 focus:ring-slate-800"
-                    />
-                    <div className="flex flex-col select-none">
-                      <span className="text-sm font-semibold text-slate-900 font-sans">
-                        {opt.title}
-                      </span>
-                      <span className="text-xs text-gray-500 leading-normal mt-0.5">
-                        {opt.description}
-                      </span>
+          {/* Mode selection */}
+          <div className="flex flex-col space-y-2">
+            <label className="text-[10px] font-bold tracking-widest text-stone-400 uppercase flex items-center space-x-1.5">
+              <span className="text-[#df4d3f]">✦</span>
+              <span>Disagreement Style</span>
+            </label>
+            <div className="space-y-2">
+              {modeOptions.map((opt) => {
+                const isSelected = selectedMode === opt.id;
+                return (
+                  <motion.div
+                    key={opt.id}
+                    onClick={() => !isLoading && setSelectedMode(opt.id)}
+                    className={`border rounded-md p-3 cursor-pointer select-none transition-all duration-200 ${
+                      isSelected
+                        ? "border-[#df4d3f]/60 bg-[#171716] text-stone-100 shadow-[0_0_12px_rgba(223,77,63,0.1)]"
+                        : "border-stone-800 bg-[#111110] text-stone-400 hover:border-stone-700/80 hover:bg-[#151514]"
+                    }`}
+                    whileHover={!isLoading ? { 
+                      y: -2, 
+                      scale: 1.015
+                    } : {}}
+                    whileTap={!isLoading ? { scale: 0.99 } : {}}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    id={`mode-card-${opt.id.toLowerCase().replace(" ", "-")}`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="mt-0.5 flex items-center justify-center">
+                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors duration-150 ${
+                          isSelected ? "border-[#df4d3f] bg-[#df4d3f]" : "border-stone-700 bg-stone-900"
+                        }`}>
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-stone-100" />}
+                        </div>
+                      </div>
+                      <div className="flex flex-col leading-tight">
+                        <span className={`text-[11px] font-bold font-sans tracking-wide ${isSelected ? "text-stone-100" : "text-stone-300"}`}>
+                          {opt.title}
+                        </span>
+                        <span className="text-[10px] text-stone-500 leading-normal mt-0.5">
+                          {opt.description}
+                        </span>
+                      </div>
                     </div>
-                  </label>
-                </div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* Form Submission and Clear Buttons */}
-        <div className="flex space-x-3">
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={isLoading || (!ideaText && selectedMode === "Demolish")}
-            className={`w-1/3 py-3 px-4 rounded-md font-semibold text-xs uppercase tracking-wider transition-colors duration-150 ease-out border ${
-              isLoading || (!ideaText && selectedMode === "Demolish")
-                ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
-                : "bg-white text-slate-700 border-gray-200 hover:bg-gray-50 active:bg-gray-100 cursor-pointer"
-            }`}
-            id="btn-clear-input"
-          >
-            Clear
-          </button>
-          <button
-            type="submit"
-            disabled={!ideaText.trim() || isLoading}
-            className={`flex-1 py-3 px-4 rounded-md font-semibold text-xs uppercase tracking-wider transition-colors duration-150 ease-out border ${
-              ideaText.trim() && !isLoading
-                ? "bg-slate-800 hover:bg-slate-900 active:bg-black text-white border-slate-800 cursor-pointer"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
-            id="btn-analyze"
-          >
-            {isLoading ? "Challenging..." : "Analyze"}
-          </button>
-        </div>
-      </form>
+          {/* Form Submission and Clear Buttons */}
+          <div className="flex space-x-2 pt-2">
+            <motion.button
+              type="button"
+              onClick={handleClear}
+              disabled={isLoading || (!ideaText && selectedMode === "Demolish")}
+              className={`py-2.5 px-3 rounded-md font-semibold text-[10px] uppercase tracking-wider transition-colors duration-150 ease-out border w-1/4 ${
+                isLoading || (!ideaText && selectedMode === "Demolish")
+                  ? "bg-stone-900/50 text-stone-600 border-stone-900 cursor-not-allowed"
+                  : "bg-[#111110] text-stone-400 border-stone-800 hover:text-stone-200 cursor-pointer"
+              }`}
+              whileHover={!(isLoading || (!ideaText && selectedMode === "Demolish")) ? { scale: 1.03, y: -1 } : {}}
+              whileTap={!(isLoading || (!ideaText && selectedMode === "Demolish")) ? { scale: 0.97 } : {}}
+              id="btn-clear-input"
+            >
+              Clear
+            </motion.button>
+            <motion.button
+              type="submit"
+              disabled={!ideaText.trim() || isLoading}
+              className={`flex-1 py-2.5 px-4 rounded-md font-bold text-[10px] uppercase tracking-wider transition-colors duration-150 ease-out border ${
+                ideaText.trim() && !isLoading
+                  ? "bg-[#df4d3f] hover:bg-[#e05649] active:bg-[#c93f32] text-white border-[#df4d3f] cursor-pointer"
+                  : "bg-stone-900 text-stone-600 border-stone-900 cursor-not-allowed"
+              }`}
+              whileHover={ideaText.trim() && !isLoading ? { 
+                scale: 1.02, 
+                y: -1, 
+                boxShadow: "0 4px 15px rgba(223, 77, 63, 0.3)" 
+              } : {}}
+              whileTap={ideaText.trim() && !isLoading ? { scale: 0.98 } : {}}
+              id="btn-analyze"
+            >
+              {isLoading ? "Challenging..." : "Analyze Proposal"}
+            </motion.button>
+          </div>
+        </form>
+
+
+      </div>
 
       {/* Advisory Note */}
-      <p className="text-[11px] text-gray-400 leading-relaxed mt-6 border-t border-gray-100 pt-4 font-sans select-none">
-        ADVOCATE will argue against your idea. This is intentional.
-        The stronger the pushback, the more robust your thinking becomes.
+      <p className="text-[9px] text-stone-500 leading-relaxed pt-3 border-t border-stone-850 font-sans select-none">
+        ADVOCATE will actively identify blindspots, rebut arguments, and challenge assumptions. Work within total reason.
       </p>
     </div>
   );

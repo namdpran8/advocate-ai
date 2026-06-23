@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useMotionValue, useSpring, motion } from "motion/react";
 import { jsPDF } from "jspdf";
-import Header from "./components/Header";
+import { Volume2, VolumeX } from "lucide-react";
 import InputPanel from "./components/InputPanel";
 import OutputPanel from "./components/OutputPanel";
 import { analyzeIdea } from "./data/mockData";
+import { getMuteState, setMuteState, playCompletionSound, playCounterSound } from "./utils/audio";
 
 /**
  * ============================================================================
@@ -39,6 +41,59 @@ export default function App() {
   
   // Loading overlay state
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sound effects mute state
+  const [isMuted, setIsMuted] = useState(getMuteState());
+
+  const handleToggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    setMuteState(nextMuted);
+    if (!nextMuted) {
+      // Small feedback click to indicate sound is enabled
+      setTimeout(() => {
+        playCounterSound();
+      }, 50);
+    }
+  };
+
+  // Ref for auto-scrolling to the active output or typing indicator
+  const outputRef = useRef(null);
+
+  // Auto-scroll to output element when loading starts or when results are loaded
+  useEffect(() => {
+    if (isLoading || activeAnalysis) {
+      const timer = setTimeout(() => {
+        if (outputRef.current) {
+          outputRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 120); // brief delay to let DOM and animations initialize
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, activeAnalysis]);
+
+  // Framer Motion values for the background follower light
+  const mouseX = useMotionValue(-300);
+  const mouseY = useMotionValue(-300);
+
+  // Smooth springs for tracking the cursor gracefully
+  const springX = useSpring(mouseX, { stiffness: 80, damping: 20, mass: 0.4 });
+  const springY = useSpring(mouseY, { stiffness: 80, damping: 20, mass: 0.4 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [mouseX, mouseY]);
 
   // Expanded seed database containing prefilled outputs for preseeded historical rows
   const [historyList, setHistoryList] = useState([
@@ -137,6 +192,7 @@ export default function App() {
           setActiveAnalysis(newRecord);
           setActiveSessionId(newId);
           setHistoryList((prev) => [newRecord, ...prev]);
+          playCompletionSound();
         }
       } catch (error) {
         console.error("Dialectic stress error on execution:", error);
@@ -388,47 +444,90 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col font-sans text-slate-800">
-      {/* 1️⃣ Top Horizonal Header */}
-      <Header 
-        hasAnalysis={!!activeAnalysis && !isLoading} 
-        onExport={handleExportPDF} 
+    <div className="relative min-h-screen bg-[#080807] flex flex-col lg:flex-row font-sans text-stone-100 select-none overflow-hidden">
+      {/* Background radial glow following cursor */}
+      <motion.div
+        className="pointer-events-none fixed w-[350px] h-[350px] rounded-full bg-white/[0.04] blur-[90px] -translate-x-1/2 -translate-y-1/2 z-0"
+        style={{
+          left: springX,
+          top: springY,
+        }}
       />
 
-      {/* Main Container Workspace */}
-      <main className="flex-grow max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        
-        {/* 2️⃣ Workstation Main View: 2-Column Side-by-Side Flex */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Left Sidebar */}
+      <aside className="relative z-10 w-full lg:w-[350px] xl:w-[380px] lg:h-screen lg:sticky lg:top-0 bg-[#0c0c0b]/85 backdrop-blur-md border-b lg:border-b-0 lg:border-r border-stone-800/80 p-5 flex flex-col justify-between overflow-y-auto shrink-0">
+        <InputPanel
+          ideaText={ideaText}
+          setIdeaText={setIdeaText}
+          selectedMode={selectedMode}
+          setSelectedMode={setSelectedMode}
+          onAnalyze={handleAnalyze}
+          isLoading={isLoading}
+          historyList={historyList}
+          activeSessionId={activeSessionId}
+          onSelectSession={handleSelectSession}
+        />
+      </aside>
+
+      {/* Right Main Content Area */}
+      <main className="relative z-10 flex-grow min-h-screen flex flex-col justify-between bg-[#080807]/75 backdrop-blur-md">
+        <div className="max-w-4xl w-full mx-auto p-6 md:p-10 lg:p-12 space-y-8 flex-grow">
           
-          {/* Left Column Area (Span 5 on Large Screens) */}
-          <div className="lg:col-span-5 h-full">
-            <InputPanel
-              ideaText={ideaText}
-              setIdeaText={setIdeaText}
-              selectedMode={selectedMode}
-              setSelectedMode={setSelectedMode}
-              onAnalyze={handleAnalyze}
-              isLoading={isLoading}
-            />
+          {/* Spacer */}
+          <div className="h-2"></div>
+
+          {/* Brand Display Header */}
+          <div className="select-none border-b border-stone-900 pb-5">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-stone-100 font-display" id="main-display-title">
+              ADVOCATE
+            </h1>
+            <p className="mt-1.5 text-stone-400 font-medium text-xs md:text-sm max-w-2xl leading-relaxed">
+              A dialectical critique engine that exposes hidden assumptions — <span className="text-[#df4d3f]/90 font-semibold italic">not a validator.</span>
+            </p>
           </div>
 
-          {/* Right Column Area (Span 7 on Large Screens) */}
-          <div className="lg:col-span-7 h-full">
+          {/* Output Panel Container */}
+          <div ref={outputRef} className="pt-2">
             <OutputPanel
               analysisResult={activeAnalysis}
               isLoading={isLoading}
+              onExportPDF={handleExportPDF}
             />
           </div>
 
         </div>
 
+        {/* Corporate footer */}
+        <footer className="py-6 border-t border-stone-900 bg-[#080807]/50 text-center select-none text-[9px] text-stone-600 font-sans tracking-widest uppercase">
+          ADVOCATE • DIALECTICAL ASSESSMENT ENGINE • © 2026
+        </footer>
       </main>
 
-      {/* Corporate aesthetic system-level footer */}
-      <footer className="py-6 border-t border-gray-200 bg-white text-center select-none text-[10px] text-gray-400 font-sans tracking-wide">
-        ADVOCATE DIALECTICAL OFFICE SYSTEM © 2026 • WORK WITHIN TOTAL REASON
-      </footer>
+      {/* Minimalist Sound Control Toggle in absolute bottom-right corner of screen */}
+      <motion.button
+        onClick={handleToggleMute}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center space-x-2 px-3 py-1.5 rounded-full border text-[9px] font-bold tracking-wider uppercase backdrop-blur-md transition-all duration-200 cursor-pointer ${
+          isMuted
+            ? "bg-[#0c0c0b]/90 border-stone-800 text-stone-500 hover:text-stone-400 hover:border-stone-700 shadow-md"
+            : "bg-[#df4d3f]/10 border-[#df4d3f]/30 text-[#df4d3f] hover:bg-[#df4d3f]/20 shadow-[0_0_15px_rgba(223,77,63,0.1)]"
+        }`}
+        id="btn-sound-toggle"
+        title={isMuted ? "Unmute audio feedback" : "Mute audio feedback"}
+      >
+        {isMuted ? (
+          <>
+            <VolumeX className="w-3.5 h-3.5" />
+            <span>Muted</span>
+          </>
+        ) : (
+          <>
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Sound On</span>
+          </>
+        )}
+      </motion.button>
     </div>
   );
 }
